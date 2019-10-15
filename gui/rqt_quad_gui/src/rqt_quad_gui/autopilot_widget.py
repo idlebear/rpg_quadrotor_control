@@ -47,7 +47,7 @@ class AutopilotWidget(QWidget):
         # load UI
         ui_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            '../../../../resource/autopilot_widget.ui')
+            '../../../../share/rqt_quad_gui/resource/autopilot_widget.ui')
         loadUi(ui_file, self)
 
         # Timer
