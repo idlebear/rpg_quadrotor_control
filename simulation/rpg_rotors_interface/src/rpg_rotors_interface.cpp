@@ -12,29 +12,40 @@ namespace rpg_rotors_interface
 {
 
 RPGRotorsInterface::RPGRotorsInterface(const ros::NodeHandle& nh,
-                                       const ros::NodeHandle& pnh) :
-    nh_(nh), pnh_(pnh), interface_armed_(false), torques_and_thrust_estimate_(), control_command_()
+                                       const ros::NodeHandle& pnh,
+                                       const std::string& ns ) :
+    nh_(nh), pnh_(pnh), ns_(ns), interface_armed_(false), torques_and_thrust_estimate_(), control_command_()
 {
   loadParameters();
 
+  if( ns_ != "" ) {
+      ns_ = ns_ + "/";
+  }
+
   rotors_desired_motor_speed_pub_ = nh_.advertise<mav_msgs::Actuators>(
-      "command/motor_speed", 1);
+      ns_ + "command/motor_speed", 1);
 
   rpg_control_command_sub_ = nh_.subscribe(
-      "control_command", 1, &RPGRotorsInterface::rpgControlCommandCallback,
+          ns_ + "control_command", 1, &RPGRotorsInterface::rpgControlCommandCallback,
       this);
   rotors_odometry_sub_ = nh_.subscribe(
-      "odometry", 1, &RPGRotorsInterface::rotorsOdometryCallback, this);
-  motor_speed_sub_ = nh_.subscribe("motor_speed", 1,
+          ns_ + "ground_truth/odometry", 1, &RPGRotorsInterface::rotorsOdometryCallback, this);
+  motor_speed_sub_ = nh_.subscribe(ns_ + "motor_speed", 1,
                                    &RPGRotorsInterface::motorSpeedCallback,
                                    this);
-  arm_interface_sub_ = nh_.subscribe("rpg_rotors_interface/arm", 1,
+  arm_interface_sub_ = nh_.subscribe(ns_ + "bridge/arm", 1,
                                      &RPGRotorsInterface::armInterfaceCallback,
                                      this);
 
   low_level_control_loop_timer_ = nh_.createTimer(
       ros::Duration(1.0 / low_level_control_frequency_),
       &RPGRotorsInterface::lowLevelControlLoop, this);
+
+    rotors_arm_state_pub_ = nh_.advertise<std_msgs::Bool>(ns_ + "bridge/arm_state", 1 );
+    arm_state_report_timer_ = nh_.createTimer(
+            ros::Duration(1.0 / arm_state_report_frequency_),
+            &RPGRotorsInterface::armStateReportLoop, this);
+
 }
 
 RPGRotorsInterface::~RPGRotorsInterface()
@@ -121,6 +132,15 @@ void RPGRotorsInterface::lowLevelControlLoop(const ros::TimerEvent& time)
 
   rotors_desired_motor_speed_pub_.publish(desired_motor_speed);
 }
+
+void RPGRotorsInterface::armStateReportLoop(const ros::TimerEvent& time)
+{
+    auto state = std_msgs::Bool();
+    state.data = interface_armed_;
+
+    rotors_arm_state_pub_.publish(state);
+}
+
 
 void RPGRotorsInterface::rotorsOdometryCallback(
     const nav_msgs::Odometry::ConstPtr& msg)
@@ -319,6 +339,8 @@ void RPGRotorsInterface::loadParameters()
                              8.54858e-06, pnh_);
   quadrotor_common::getParam("mass", mass_, 0.68 + 0.009 * 4.0, pnh_);
   quadrotor_common::getParam("max_rotor_speed", max_rotor_speed_, 838.0, pnh_);
+
+  quadrotor_common::getParam("arm_state_report_frequency", arm_state_report_frequency_, 1.0, pnh_);
 }
 
 }
@@ -354,8 +376,12 @@ int main(int argc, char** argv)
   // Wait for 5 seconds to let the Gazebo GUI show up.
   ros::Duration(5.0).sleep();
 
+  // Build a public and private space node handle
+  auto nh = ros::NodeHandle();
+  auto pnh = ros::NodeHandle("~");
+
   // Run the interface
-  rpg_rotors_interface::RPGRotorsInterface rpg_rotors_interface;
+  rpg_rotors_interface::RPGRotorsInterface rpg_rotors_interface( nh, pnh, "hummingbird" );
   ros::spin();
 
   return 0;

@@ -7,6 +7,7 @@
 #include <quadrotor_common/control_command.h>
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
+#include <string>
 
 namespace rpg_rotors_interface
 {
@@ -22,16 +23,17 @@ class RPGRotorsInterface
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  RPGRotorsInterface(const ros::NodeHandle& nh, const ros::NodeHandle& pnh);
+  RPGRotorsInterface(const ros::NodeHandle& nh, const ros::NodeHandle& pnh, const std::string& ns = "");
 
-  RPGRotorsInterface() :
-      RPGRotorsInterface(ros::NodeHandle(), ros::NodeHandle("~"))
+  RPGRotorsInterface(const std::string& ns = "") :
+      RPGRotorsInterface(ros::NodeHandle(), ros::NodeHandle("~"), ns)
   {
   }
   ~RPGRotorsInterface();
 
 private:
   void lowLevelControlLoop(const ros::TimerEvent& time);
+    void armStateReportLoop(const ros::TimerEvent& time);
 
   void rotorsOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
   void rpgControlCommandCallback(
@@ -56,10 +58,13 @@ private:
 
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
+  std::string ns_;
 
   ros::Timer low_level_control_loop_timer_;
+    ros::Timer arm_state_report_timer_;
 
   ros::Publisher rotors_desired_motor_speed_pub_;
+  ros::Publisher rotors_arm_state_pub_;
 
   ros::Subscriber rotors_odometry_sub_;
   ros::Subscriber rpg_control_command_sub_;
@@ -81,6 +86,8 @@ private:
   double rotor_thrust_coeff_;
   double mass_;
   double max_rotor_speed_;
+  double arm_state_report_frequency_;
+
 };
 
 } // namespace rpg_rotors_interface
