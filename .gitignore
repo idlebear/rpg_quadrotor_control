@@ -41,3 +41,5 @@ ROS_NOBUILD
 
 # Matlab msgs gen
 matlab_gen
+
+simulation/rpg_rotors_interface/cmake-build-debug/
