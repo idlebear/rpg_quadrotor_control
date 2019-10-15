@@ -23,7 +23,7 @@ class QuadNameWidget(QWidget):
         # load UI
         ui_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            '../../resource/quad_name_widget.ui')
+            '../../../../share/rqt_quad_gui/resource/quad_name_widget.ui')
         loadUi(ui_file, self)
 
     def getQuadName(self):
